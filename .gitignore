@@ -1,3 +1,4 @@
-# Secrets 
-.env 
 *.pem
+.env
+*.env
+.env.*
