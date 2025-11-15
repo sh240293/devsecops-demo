@@ -1,0 +1,28 @@
+name: Gitleaks Secret Scan
+on:
+  push:
+    branches: [ demo ]
+  pull_request:
+jobs:
+  gitleaks:
+    name: Run Gitleaks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Gitleaks
+        uses: zricethezav/gitleaks-action@v2
+        env:
+          #GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_REPORT_FORMAT: json
+          GITLEAKS_REPORT_PATH: gitleaks-report.json
+          GITLEAKS_EXIT_CODE: "1" # fail pipeline if secrets found
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
