@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  namespace: monitoring
+  labels:
+    k8s-app: filebeat
+    kubernetes.io/cluster-service: "true"
+spec:
+  selector:
+    matchLabels:
+      k8s-app: filebeat
+  template:
+    metadata:
+      labels:
+        k8s-app: filebeat
+        kubernetes.io/cluster-service: "true"
+    spec:
+      serviceAccountName: filebeat
+      #terminationGracePeriodSeconds: 30
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: filebeat
+        image: elastic/filebeat:8.16.1
+        args: [
+          "-c", "/etc/filebeat.yml",
+          "-e",
+        ]
+        env:
+        - name: ELASTICSEARCH_HOST
+          value: "http://elasticsearch:9200"
+        - name: ELASTICSEARCH_PORT
+          value: "9200"
+            #- name: ELASTICSEARCH_USERNAME
+            #value: elastic
+            #- name: ELASTICSEARCH_PASSWORD
+            #value: changeme
+        - name: ELASTIC_CLOUD_ID
+          value: 
+        - name: ELASTIC_CLOUD_AUTH
+          value: 
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        securityContext:
+          runAsUser: 0
+          privileged: true
+          capabilities:
+             add: ["SYS_RESOURCE"]
+        volumeMounts:
+        - name: config
+          mountPath: /etc/filebeat.yml
+            #readOnly: true
+          subPath: filebeat.yml
+            #- name: inputs
+            #mountPath: /usr/share/filebeat/inputs.d
+            #readOnly: true
+        - name: data
+          mountPath: /usr/share/filebeat/data
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+            #readOnly: true
+        - name: varlogpods
+          mountPath: /var/log/pods
+        - name: varcontainerlogs
+          mountPath: /var/log/containers
+        - name: varlibdocker
+          mountPath: /var/lib/docker
+        - name: cgroup
+          mountPath: /sys/fs/cgroup
+      volumes:
+      - name: config
+        configMap:
+          #defaultMode: 0600
+          name: filebeat-config
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+            #- name: inputs
+            #configMap:
+          #defaultMode: 0600
+          #name: filebeat-inputs
+      - name: varlibdocker
+        hostPath:
+          path: /var/lib/docker  # Path to Docker container logs
+          type: Directory
+      - name: varlogpods
+        hostPath:
+          path: /var/log/pods
+          type: Directory
+      - name: cgroup
+        hostPath:
+          path: /sys/fs/cgroup  # Mount the host filesystem for log collection
+          type: Directory
+      - name: varcontainerlogs
+        hostPath:
+          path: /var/log/containers  # Mount the host filesystem for log collection
+          type: Directory
+      - name: data
+        hostPath:
+          # When filebeat runs as non-root user, this directory needs to be writable by group (g+w).
+          path: /var/lib/filebeat-data
+          type: DirectoryOrCreate

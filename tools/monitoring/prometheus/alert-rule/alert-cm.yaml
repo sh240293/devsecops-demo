@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  alertsrules.yml: |
+    groups:
+    - name: demo-app-alerts
+      rules:
+      - alert: HighLoginFails
+        expr: increase(login_failed_total{job="kubernetes-pod-metrics"}[5m]) > 10
+        for: 0m
+        labels:
+          severity: critical
+          env: minikube
+          team: devsecops
+          alert_type: pod-alerts
+        annotations:
+          summary: "High Login Fails on {{ $labels.app }} ({{ printf \"%.0f\" $value }})"
+          description: |-
+            Pod {{ $labels.app }} has exceeded 10 login failures within 5 minutes.
+            Current failed logins: {{ printf "%.0f" $value }}
+            Job: {{ $labels.job }}
+          runbook: "https://wiki.example.com/runbook/high-failed-login"
+          dashboard: "http://192.168.0.101:30002/d/advtrlx/new-dashboard?orgId=1&from=now-15m&to=now&timezone=browser"

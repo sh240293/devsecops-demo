@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devsecops-vault-demo
+  namespace: demo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-vault
+  template:
+    metadata:
+      labels:
+        app: nginx-vault
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "app-demo-role"
+
+        # Correct KV v2 path
+        vault.hashicorp.com/agent-inject-secret-appsecret: "kv/data/devsecops/demo"
+
+        vault.hashicorp.com/agent-inject-template-appsecret: |
+          {{- with secret "kv/data/devsecops/demo" -}}
+          SHANISH={{ .Data.data.SHANISH }}
+          DB_PASS={{ .Data.data.DB_PASS }}
+          {{- end }}
+
+        # Correct file mode annotation
+        vault.hashicorp.com/agent-inject-file-mode-appsecret: "0666"
+        vault.hashicorp.com/agent-inject-volume-mode: "0777"
+
+    spec:
+      serviceAccountName: app-demo-sa
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+      volumes:
+        - name: vault-secret
+          emptyDir: {}
+

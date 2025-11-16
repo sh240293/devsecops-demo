@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devsecops-vault-demo
+  namespace: demo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-vault
+  template:
+    metadata:
+      labels:
+        app: nginx-vault
+      annotations:
+        # Enable Vault Agent Injection
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "app-demo-role"
+        # Secret path in Vault (KV v2)
+        vault.hashicorp.com/agent-inject-secret-appsecret: "kv/devsecops/demo"
+        # Render secret as key=value file
+        vault.hashicorp.com/agent-inject-template-appsecret: |
+          {{- with secret "kv/devsecops/demo" -}}
+          SHANISH={{ .Data.data.SHANISH }}
+          DB_PASS={{ .Data.data.DB_PASS }}
+          {{- end }}
+        # Set file permissions so container can read
+        vault.hashicorp.com/agent-inject-template-mode-demo: "0666"
+        vault.hashicorp.com/agent-inject-volume-mode: "0777"
+    spec:
+      serviceAccountName: app-demo-sa
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+      volumes:
+        - name: vault-secret
+          emptyDir: {}
+

@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-runner
+  namespace: demo-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-runner
+  template:
+    metadata:
+      labels:
+        app: github-runner
+    spec:
+      securityContext:
+        runAsUser: 1001
+        runAsGroup: 121
+        fsGroup: 121
+      containers:
+      - name: runner
+        image: ghcr.io/myoung34/docker-github-actions-runner:latest
+        workingDir: /actions-runner
+        command: ["/bin/bash", "/runner-entrypoint/runner-entrypoint.sh"]
+        securityContext:
+          runAsNonRoot: true
+        env:
+          - name: REPO_URL
+            value: "https://github.com/sh240293/devsecops-demo"
+          - name: RUNNER_NAME
+            value: "k8s-runner-1"
+          - name: RUNNER_REPO
+            value: "sh240293/devsecops-demo"
+          - name: RUNNER_HTTP_TIMEOUT
+            value: "120"
+          - name: GITHUB_PAT
+            valueFrom:
+              secretKeyRef:
+                name: github-runner-token
+                key: GITHUB_PAT
+          - name: RUNNER_WORKDIR
+            value: "/runner/_work"
+        volumeMounts:
+          - name: runner-workdir
+            mountPath: /runner/_work
+          - name: runner-scripts
+            mountPath: /runner-entrypoint
+            readOnly: true
+      volumes:
+        - name: runner-workdir
+          emptyDir: {}
+        - name: runner-scripts
+          configMap:
+            name: github-runner-scripts

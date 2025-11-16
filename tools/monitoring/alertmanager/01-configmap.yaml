@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yaml: |
+    global:
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'linux.school2@gmail.com'
+      smtp_auth_username: 'linux.school2@gmail.com'
+      smtp_auth_password: 'crjo utde kcuc kijb'
+      smtp_require_tls: true
+
+    route:
+      receiver: 'email-alert'
+      group_by: ['alertname', 'cluster', 'severity']
+      group_wait: 10s
+      group_interval: 1m      
+      repeat_interval: 30m 
+      routes:
+        - receiver: 'email-alert'
+          match:
+            severity: critical
+          group_wait: 10s
+          group_interval: 1m
+          repeat_interval: 15m
+    receivers:
+      - name: 'email-alert'
+        email_configs:
+          - to: 'shanish7best@gmail.com'
+            send_resolved: true
+
